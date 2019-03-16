@@ -12,6 +12,9 @@
 #include "world_model_display.h"
 #include "../visuals/entity_visual.h"
 
+#include <algorithm>
+#include <vector>
+
 // ----------------------------------------------------------------------------------------------------
 
 float COLORS[27][3] = { { 0.6, 0.6, 0.6},
@@ -59,6 +62,27 @@ unsigned int djb2(const std::string& str)
 
 // ----------------------------------------------------------------------------------------------------
 
+/*
+* @brief split Implementation by using delimiter as a character. Multiple delimeters are removed.
+* @param strToSplit input string, which is splitted
+* @param delimeter char on which the string is split
+* @return vector of sub-strings
+*/
+std::vector<std::string> split(const std::string& strToSplit, char delimeter)
+{
+   std::stringstream ss(strToSplit);
+   std::string item;
+   std::vector<std::string> splittedStrings;
+   while (std::getline(ss, item, delimeter))
+   {
+       if (!item.empty() && item[0] != delimeter)
+           splittedStrings.push_back(item);
+   }
+   return splittedStrings;
+}
+
+// ----------------------------------------------------------------------------------------------------
+
 namespace ed_rviz_plugins
 {
 
@@ -66,9 +90,10 @@ WorldModelDisplay::WorldModelDisplay()
 {
     service_name_property_ = new rviz::StringProperty( "Mesh query service name", "ed/query/meshes", "Service name for querying meshes", this, SLOT( updateProperties() ));
 
-    entity_label_opacity_property_ = new rviz::FloatProperty("Entity label opacity", 1.0, "Opacity of entity label", this, SLOT(updateProperties()));
-    entity_area_label_opacity_property_ = new rviz::FloatProperty("Entity Area label opacity", 0.4, "Opacity of entity label", this, SLOT(updateProperties()));
-    entity_area_opacity_property_ = new rviz::FloatProperty("Entity Area opacity", 0.2, "Opacity of entity label", this, SLOT(updateProperties()));
+    entity_label_opacity_property_ = new rviz::FloatProperty("Entity label opacity", 1.0, "Opacity of entity label", this);
+    entity_area_label_opacity_property_ = new rviz::FloatProperty("Entity Area label opacity", 0.4, "Opacity of entity label", this);
+    entity_area_opacity_property_ = new rviz::FloatProperty("Entity Area opacity", 0.2, "Opacity of entity label", this);
+    exclude_labels_property_ = new rviz::StringProperty( "Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
 
     updateProperties();
 }
@@ -80,6 +105,11 @@ void WorldModelDisplay::updateProperties()
 
     ros::NodeHandle nh;
     service_client_ = nh.serviceClient<ed_gui_server::QueryMeshes>(service_name_property_->getStdString());
+}
+
+void WorldModelDisplay::updateExcludeLabels()
+{
+    exclude_labels_ = split(exclude_labels_property_->getStdString(),';');
 }
 
 void WorldModelDisplay::onInitialize()
@@ -166,11 +196,14 @@ void WorldModelDisplay::processMessage(const ed_gui_server::EntityInfos::ConstPt
                            entity_area_opacity_property_->getFloat(), entity_area_label_opacity_property_->getFloat());
 
         std::string label;
-        label = info.id.substr(0, 6);
+        // exclude label (label remains empty string) in case it starts with one of defined prefixes
+        if (std::none_of(exclude_labels_.cbegin(), exclude_labels_.cend(), [&info](std::string s){return (info.id.substr(0, s.length()) == s);}))
+        {
+            label = info.id.substr(0, 6);
 
-        if (!info.type.empty())
-            label += " (" + info.type + ")";
-
+            if (!info.type.empty())
+                label += " (" + info.type + ")";
+        }
         visual->setLabel(label);
 
         alive_ids.push_back(info.id);
