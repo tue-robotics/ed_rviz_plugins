@@ -123,6 +123,7 @@ WorldModelDisplay::~WorldModelDisplay()
   delete entity_label_opacity_property_;
   delete entity_area_label_opacity_property_;
   delete entity_area_opacity_property_;
+  delete exclude_labels_property_;
 }
 
 void WorldModelDisplay::reset()
