@@ -38,6 +38,7 @@ protected:
 
 private Q_SLOTS:
     void updateProperties();
+    void updateExcludeLabels();
 
 private:
     void processMessage( const ed_gui_server::EntityInfos::ConstPtr& msg );
@@ -52,6 +53,9 @@ private:
     rviz::FloatProperty* entity_label_opacity_property_;
     rviz::FloatProperty* entity_area_label_opacity_property_;
     rviz::FloatProperty* entity_area_opacity_property_;
+    rviz::StringProperty* exclude_labels_property_;
+
+    std::vector<std::string> exclude_labels_;
 };
 
 }

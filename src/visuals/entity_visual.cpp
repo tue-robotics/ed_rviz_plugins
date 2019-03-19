@@ -192,8 +192,15 @@ void EntityVisual::setConvexHull ( const ed_gui_server::Polygon& polygon )
 void EntityVisual::setLabel (const std::string& label )
 {
     label_->setTextAlignment(rviz::MovableText::H_CENTER, rviz::MovableText::V_CENTER);
-    label_->setCharacterHeight(0.05);
-    label_->setCaption(label);
+    // You can't set an empty string as caption. But without setting a caption, its shows 'unknown'
+    // Hide this 'unknown' by setting height to zero.
+    if (label.empty())
+        label_->setCharacterHeight(0);
+    else
+    {
+        label_->setCharacterHeight(0.05);
+        label_->setCaption(label);
+    }
 }
 
 // Position and orientation are passed through to the SceneNode.
