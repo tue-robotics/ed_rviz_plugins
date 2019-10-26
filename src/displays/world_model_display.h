@@ -3,8 +3,8 @@
 
 #ifndef Q_MOC_RUN
 #include <rviz/message_filter_display.h>
-#include <ed_gui_server/EntityInfos.h>
-#include <ed_gui_server/QueryMeshes.h>
+#include <ed_gui_server_msgs/EntityInfos.h>
+#include <ed_gui_server_msgs/QueryMeshes.h>
 #endif
 
 namespace Ogre
@@ -24,7 +24,7 @@ namespace ed_rviz_plugins
 
 class EntityVisual;
 
-class WorldModelDisplay: public rviz::MessageFilterDisplay<ed_gui_server::EntityInfos>
+class WorldModelDisplay: public rviz::MessageFilterDisplay<ed_gui_server_msgs::EntityInfos>
 {
 Q_OBJECT
 public:
@@ -41,10 +41,10 @@ private Q_SLOTS:
     void updateExcludeLabels();
 
 private:
-    void processMessage( const ed_gui_server::EntityInfos::ConstPtr& msg );
+    void processMessage( const ed_gui_server_msgs::EntityInfos::ConstPtr& msg );
 
     ros::ServiceClient service_client_;
-    ed_gui_server::QueryMeshes query_meshes_srv_;
+    ed_gui_server_msgs::QueryMeshes query_meshes_srv_;
 
     std::map<std::string, boost::shared_ptr<EntityVisual> > visuals_;
 

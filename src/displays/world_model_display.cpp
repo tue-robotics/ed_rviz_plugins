@@ -104,7 +104,7 @@ void WorldModelDisplay::updateProperties()
         service_client_.shutdown();
 
     ros::NodeHandle nh;
-    service_client_ = nh.serviceClient<ed_gui_server::QueryMeshes>(service_name_property_->getStdString());
+    service_client_ = nh.serviceClient<ed_gui_server_msgs::QueryMeshes>(service_name_property_->getStdString());
 }
 
 void WorldModelDisplay::updateExcludeLabels()
@@ -131,7 +131,7 @@ void WorldModelDisplay::reset()
     MFDClass::reset();
 }
 
-void WorldModelDisplay::processMessage(const ed_gui_server::EntityInfos::ConstPtr &msg )
+void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::ConstPtr &msg )
 {
     // Transform to rviz frame
     Ogre::Quaternion frame_orientation;
@@ -145,7 +145,7 @@ void WorldModelDisplay::processMessage(const ed_gui_server::EntityInfos::ConstPt
     std::vector<std::string> alive_ids;
     for(unsigned int i = 0; i < msg->entities.size(); ++i)
     {
-        const ed_gui_server::EntityInfo& info = msg->entities[i];
+        const ed_gui_server_msgs::EntityInfo& info = msg->entities[i];
 
         if (info.id.size() >= 5 && info.id.substr(info.id.size() - 5) == "floor")
             continue; // Filter floor
