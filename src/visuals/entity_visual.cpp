@@ -39,7 +39,7 @@ EntityVisual::~EntityVisual()
     scene_manager_->destroySceneNode( frame_node_ );
 }
 
-void EntityVisual::setEntityMeshAndAreas(const ed_gui_server::EntityMeshAndAreas& mesh_and_areas)
+void EntityVisual::setEntityMeshAndAreas(const ed_gui_server_msgs::EntityMeshAndAreas& mesh_and_areas)
 {
     mesh_->clear();
 
@@ -81,7 +81,7 @@ void EntityVisual::setEntityMeshAndAreas(const ed_gui_server::EntityMeshAndAreas
     area_labels_.clear();
 
     // Now set the areas
-    for (const ed_gui_server::Area& a : mesh_and_areas.areas)
+    for (const ed_gui_server_msgs::Area& a : mesh_and_areas.areas)
     {
         area_labels_.push_back(boost::shared_ptr<rviz::MovableText>(new rviz::MovableText( a.name )));
         boost::shared_ptr<rviz::MovableText> label = area_labels_.back();
@@ -154,7 +154,7 @@ void EntityVisual::setColor(Ogre::ColourValue c, double entity_label_opacity, do
     mesh_->setColor(c);
 }
 
-void EntityVisual::setConvexHull ( const ed_gui_server::Polygon& polygon )
+void EntityVisual::setConvexHull ( const ed_gui_server_msgs::Polygon& polygon )
 {    
     convex_hull_->clear();
     convex_hull_->setMaxPointsPerLine(2);

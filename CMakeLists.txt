@@ -4,7 +4,7 @@
 ## First start with some standard catkin stuff.
 cmake_minimum_required(VERSION 2.8.3)
 project(ed_rviz_plugins)
-find_package(catkin REQUIRED COMPONENTS rviz ed_gui_server)
+find_package(catkin REQUIRED COMPONENTS rviz ed_gui_server_msgs)
 catkin_package()
 include_directories(${catkin_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS})
