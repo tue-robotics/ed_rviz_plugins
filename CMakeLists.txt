@@ -25,8 +25,8 @@ else()
     set(QT_LIBRARIES Qt5::Widgets)
 endif()
 
-add_definitions(-DQT_NO_KEYWORDS)
-add_definitions(-std=c++11)
+add_compile_options(-DQT_NO_KEYWORDS)
+add_compile_options(-std=c++11)
 
 set(SOURCE_FILES
   src/displays/world_model_display.cpp
