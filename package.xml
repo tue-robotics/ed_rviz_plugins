@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>ed_rviz_plugins</name>
   <version>0.9.1</version>
   <description>
@@ -9,12 +9,18 @@
   <license>MIT</license>
 
   <url>http://ros.org/wiki/rviz_plugins</url>
-  <author>Rein Appeldoorn</author>
+  <author email="reinzor@gmail.com">Rein Appeldoorn</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <depend>rviz</depend>
   <depend>ed_gui_server_msgs</depend>
+  <depend>rviz</depend>
+
+  <build_depend>qtbase5-dev</build_depend>
+
+  <exec_depend>libqt5-core</exec_depend>
+  <exec_depend>libqt5-gui</exec_depend>
+  <exec_depend>libqt5-widgets</exec_depend>
 
   <export>
       <rviz plugin="${prefix}/plugin_description.xml"/>
