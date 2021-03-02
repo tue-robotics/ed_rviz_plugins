@@ -26,7 +26,6 @@ else()
 endif()
 
 add_compile_options(-DQT_NO_KEYWORDS)
-add_compile_options(-std=c++11)
 
 set(SOURCE_FILES
   src/displays/world_model_display.cpp
