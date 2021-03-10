@@ -136,9 +136,9 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
     // Transform to rviz frame
     Ogre::Quaternion frame_orientation;
     Ogre::Vector3 frame_position;
-    if( !context_->getFrameManager()->getTransform( "/map", ros::Time::now(), frame_position, frame_orientation ))
+    if( !context_->getFrameManager()->getTransform( "map", ros::Time::now(), frame_position, frame_orientation ))
     {
-        ROS_DEBUG( "Error transforming from frame '/map' to frame '%s'", qPrintable( fixed_frame_ ));
+        ROS_DEBUG( "Error transforming from frame 'map' to frame '%s'", qPrintable( fixed_frame_ ));
         return;
     }
 
