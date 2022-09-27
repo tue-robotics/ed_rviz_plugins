@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS rviz ed_gui_server_msgs)
 
 catkin_package()
 
-include_directories(${catkin_INCLUDE_DIRS})
+include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS})
 
 # Enable automoc for generating QT moc files
