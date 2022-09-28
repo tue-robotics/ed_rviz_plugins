@@ -4,9 +4,15 @@
 ## First start with some standard catkin stuff.
 cmake_minimum_required(VERSION 3.0.2)
 project(ed_rviz_plugins)
+
+add_compile_options(-Wall -Werror=all)
+add_compile_options(-Wextra -Werror=extra)
+
 find_package(catkin REQUIRED COMPONENTS rviz ed_gui_server_msgs)
+
 catkin_package()
-include_directories(${catkin_INCLUDE_DIRS})
+
+include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS})
 
 # Enable automoc for generating QT moc files
