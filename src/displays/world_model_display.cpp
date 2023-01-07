@@ -88,7 +88,7 @@ namespace ed_rviz_plugins
 
 WorldModelDisplay::WorldModelDisplay()
 {
-    service_name_property_ = new rviz::StringProperty( "Mesh query service name", "ed/query/meshes", "Service name for querying meshes", this, SLOT( updateProperties() ));
+    service_name_property_ = new rviz::StringProperty( "Mesh query service name", "ed/gui/query_meshes", "Service name for querying meshes", this, SLOT( updateProperties() ));
 
     entity_label_opacity_property_ = new rviz::FloatProperty("Entity label opacity", 1.0, "Opacity of entity label", this);
     entity_area_label_opacity_property_ = new rviz::FloatProperty("Entity Area label opacity", 0.4, "Opacity of entity label", this);
