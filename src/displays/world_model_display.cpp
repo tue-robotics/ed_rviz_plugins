@@ -86,12 +86,12 @@ namespace ed_rviz_plugins
 
 WorldModelDisplay::WorldModelDisplay()
 {
-    service_name_property_ = new rviz::StringProperty("Mesh query service name", "ed/gui/query_meshes", "Service name for querying meshes", this, SLOT(updateProperties()));
+    service_name_property_ = std::make_unique<rviz::StringProperty>("Mesh query service name", "ed/gui/query_meshes", "Service name for querying meshes", this, SLOT(updateProperties()));
 
-    entity_label_opacity_property_ = new rviz::FloatProperty("Entity label opacity", 1.0, "Opacity of entity label", this);
-    entity_area_label_opacity_property_ = new rviz::FloatProperty("Entity Area label opacity", 0.4, "Opacity of entity label", this);
-    entity_area_opacity_property_ = new rviz::FloatProperty("Entity Area opacity", 0.2, "Opacity of entity label", this);
-    exclude_labels_property_ = new rviz::StringProperty("Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
+    entity_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity label opacity", 1.0, "Opacity of entity label", this);
+    entity_area_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Area label opacity", 0.4, "Opacity of entity label", this);
+    entity_area_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Area opacity", 0.2, "Opacity of entity label", this);
+    exclude_labels_property_ = std::make_unique<rviz::StringProperty>("Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
 
     updateProperties();
 }
@@ -117,11 +117,6 @@ void WorldModelDisplay::onInitialize()
 
 WorldModelDisplay::~WorldModelDisplay()
 {
-  delete service_name_property_;
-  delete entity_label_opacity_property_;
-  delete entity_area_label_opacity_property_;
-  delete entity_area_opacity_property_;
-  delete exclude_labels_property_;
 }
 
 void WorldModelDisplay::reset()
