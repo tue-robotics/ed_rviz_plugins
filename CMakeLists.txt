@@ -8,9 +8,11 @@ project(ed_rviz_plugins)
 add_compile_options(-Wall -Werror=all)
 add_compile_options(-Wextra -Werror=extra)
 
-find_package(catkin REQUIRED COMPONENTS rviz ed_gui_server_msgs)
+find_package(catkin REQUIRED COMPONENTS ed_gui_server_msgs rviz)
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS ed_gui_server_msgs rviz
+)
 
 include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS})
@@ -76,4 +78,9 @@ install(DIRECTORY icons/
 
 install(PROGRAMS scripts/send_test_msgs.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+if(CATKIN_ENABLE_TESTING)
+  find_package(catkin_lint_cmake REQUIRED)
+  catkin_add_catkin_lint_test("-W2 --ignore LINK_DIRECTORY")
+endif()
 
