@@ -143,7 +143,7 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
     std::vector<std::string> alive_ids;
     for (const ed_gui_server_msgs::EntityInfo& info: msg->entities)
     {
-        if (info.id.size() >= 5 && info.id.substr(info.id.size() - 5) == "floor")
+        if (info.id.size() >= 5 && (info.id.substr(info.id.size() - 5) == "floor" || info.id.substr(0, 5) == "floor"))
             continue; // Filter floor
 
         if (!info.has_pose)
