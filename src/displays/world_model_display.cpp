@@ -1,8 +1,6 @@
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
 
-#include <tf/transform_listener.h>
-
 #include <rviz/visualization_manager.h>
 #include <rviz/properties/color_property.h>
 #include <rviz/properties/float_property.h>
@@ -51,8 +49,8 @@ float COLORS[27][3] = { { 0.6, 0.6, 0.6},
 unsigned int djb2(const std::string& str)
 {
     int hash = 5381;
-    for(unsigned int i = 0; i < str.size(); ++i)
-        hash = ((hash << 5) + hash) + str[i]; /* hash * 33 + c */
+    for (const char& c: str)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
     if (hash < 0)
         hash = -hash;
@@ -88,12 +86,12 @@ namespace ed_rviz_plugins
 
 WorldModelDisplay::WorldModelDisplay()
 {
-    service_name_property_ = new rviz::StringProperty( "Mesh query service name", "ed/gui/query_meshes", "Service name for querying meshes", this, SLOT( updateProperties() ));
+    service_name_property_ = std::make_unique<rviz::StringProperty>("Mesh query service name", "ed/gui/query_meshes", "Service name for querying meshes", this, SLOT(updateProperties()));
 
-    entity_label_opacity_property_ = new rviz::FloatProperty("Entity label opacity", 1.0, "Opacity of entity label", this);
-    entity_area_label_opacity_property_ = new rviz::FloatProperty("Entity Area label opacity", 0.4, "Opacity of entity label", this);
-    entity_area_opacity_property_ = new rviz::FloatProperty("Entity Area opacity", 0.2, "Opacity of entity label", this);
-    exclude_labels_property_ = new rviz::StringProperty( "Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
+    entity_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity label opacity", 1.0, "Opacity of entity label", this);
+    entity_area_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Area label opacity", 0.4, "Opacity of entity label", this);
+    entity_area_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Area opacity", 0.2, "Opacity of entity label", this);
+    exclude_labels_property_ = std::make_unique<rviz::StringProperty>("Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
 
     updateProperties();
 }
@@ -119,11 +117,6 @@ void WorldModelDisplay::onInitialize()
 
 WorldModelDisplay::~WorldModelDisplay()
 {
-  delete service_name_property_;
-  delete entity_label_opacity_property_;
-  delete entity_area_label_opacity_property_;
-  delete entity_area_opacity_property_;
-  delete exclude_labels_property_;
 }
 
 void WorldModelDisplay::reset()
@@ -131,23 +124,21 @@ void WorldModelDisplay::reset()
     MFDClass::reset();
 }
 
-void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::ConstPtr &msg )
+void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::ConstPtr &msg)
 {
     // Transform to rviz frame
     Ogre::Quaternion frame_orientation;
     Ogre::Vector3 frame_position;
-    if( !context_->getFrameManager()->getTransform( "map", ros::Time::now(), frame_position, frame_orientation ))
+    if (!context_->getFrameManager()->getTransform("map", ros::Time::now(), frame_position, frame_orientation))
     {
-        ROS_DEBUG( "Error transforming from frame 'map' to frame '%s'", qPrintable( fixed_frame_ ));
+        ROS_DEBUG("Error transforming from frame 'map' to frame '%s'", qPrintable(fixed_frame_));
         return;
     }
 
     std::vector<std::string> alive_ids;
-    for(unsigned int i = 0; i < msg->entities.size(); ++i)
+    for (const ed_gui_server_msgs::EntityInfo& info: msg->entities)
     {
-        const ed_gui_server_msgs::EntityInfo& info = msg->entities[i];
-
-        if (info.id.size() >= 5 && info.id.substr(info.id.size() - 5) == "floor")
+        if (info.id.size() >= 5 && (info.id.substr(info.id.size() - 5) == "floor" || info.id.substr(0, 5) == "floor"))
             continue; // Filter floor
 
         if (!info.has_pose)
@@ -170,21 +161,21 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
         orientation.z = info.pose.orientation.z;
         orientation.w = info.pose.orientation.w;
 
-        visual->setFramePosition( frame_position + position );
-        visual->setFrameOrientation( frame_orientation * orientation );
+        visual->setFramePosition(frame_position + position);
+        visual->setFrameOrientation(frame_orientation * orientation);
 
         if (info.mesh_revision > visual->getMeshRevision())
             query_meshes_srv_.request.entity_ids.push_back(info.id); // Mesh
         else if (info.mesh_revision == 0)
-            visual->setConvexHull( info.polygon ); // Convex hull
+            visual->setConvexHull(info.polygon); // Convex hull
 
         // Set the color
         double r,g,b;
         if (info.color.a != 0) // If a color specified, take color from the info
         {
-            r = (float)info.color.r / 255;
-            g = (float)info.color.g / 255;
-            b = (float)info.color.b / 255;
+            r = static_cast<float>(info.color.r) / 255;
+            g = static_cast<float>(info.color.g) / 255;
+            b = static_cast<float>(info.color.b) / 255;
         }
         else // random color
         {
@@ -193,8 +184,8 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
             g = COLORS[i_color][1];
             b = COLORS[i_color][2];
         }
-        visual->setColor ( Ogre::ColourValue(r, g, b, 1.0f), entity_label_opacity_property_->getFloat(),
-                           entity_area_opacity_property_->getFloat(), entity_area_label_opacity_property_->getFloat());
+        visual->setColor(Ogre::ColourValue(r, g, b, 1.0f), entity_label_opacity_property_->getFloat(),
+                         entity_area_opacity_property_->getFloat(), entity_area_label_opacity_property_->getFloat());
 
         std::string label;
         // exclude label (label remains empty string) in case it starts with one of defined prefixes
@@ -227,14 +218,14 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
     {
         if (service_client_.call(query_meshes_srv_))
         {
-            for(unsigned int i = 0; i < query_meshes_srv_.response.entity_geometries.size(); ++i)
+            for (const auto& geom : query_meshes_srv_.response.entity_geometries)
             {
-                const std::string& id = query_meshes_srv_.response.entity_geometries[i].id;
+                const std::string& id = geom.id;
 
                 if (visuals_.find(id) == visuals_.end())
                     continue;
 
-                visuals_[id]->setEntityMeshAndAreas( query_meshes_srv_.response.entity_geometries[i] );
+                visuals_[id]->setEntityMeshAndAreas(geom);
             }
         }
         else
@@ -250,4 +241,4 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
 }
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(ed_rviz_plugins::WorldModelDisplay,rviz::Display )
+PLUGINLIB_EXPORT_CLASS(ed_rviz_plugins::WorldModelDisplay,rviz::Display)

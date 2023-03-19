@@ -25,7 +25,9 @@
   <exec_depend>libqt5-gui</exec_depend>
   <exec_depend>libqt5-widgets</exec_depend>
 
+  <test_depend>catkin_lint_cmake</test_depend>
+
   <export>
-      <rviz plugin="${prefix}/plugin_description.xml"/>
+    <rviz plugin="${prefix}/plugin_description.xml" />
   </export>
 </package>

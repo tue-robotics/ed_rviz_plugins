@@ -5,6 +5,8 @@
 #include <rviz/message_filter_display.h>
 #include <ed_gui_server_msgs/EntityInfos.h>
 #include <ed_gui_server_msgs/QueryMeshes.h>
+
+#include <memory>
 #endif
 
 namespace Ogre
@@ -41,7 +43,7 @@ private Q_SLOTS:
     void updateExcludeLabels();
 
 private:
-    void processMessage( const ed_gui_server_msgs::EntityInfos::ConstPtr& msg );
+    void processMessage(const ed_gui_server_msgs::EntityInfos::ConstPtr& msg);
 
     ros::ServiceClient service_client_;
     ed_gui_server_msgs::QueryMeshes query_meshes_srv_;
@@ -49,11 +51,11 @@ private:
     std::map<std::string, boost::shared_ptr<EntityVisual> > visuals_;
 
     // User-editable property variables.
-    rviz::StringProperty* service_name_property_;
-    rviz::FloatProperty* entity_label_opacity_property_;
-    rviz::FloatProperty* entity_area_label_opacity_property_;
-    rviz::FloatProperty* entity_area_opacity_property_;
-    rviz::StringProperty* exclude_labels_property_;
+    std::unique_ptr<rviz::StringProperty> service_name_property_;
+    std::unique_ptr<rviz::FloatProperty> entity_label_opacity_property_;
+    std::unique_ptr<rviz::FloatProperty> entity_area_label_opacity_property_;
+    std::unique_ptr<rviz::FloatProperty> entity_area_opacity_property_;
+    std::unique_ptr<rviz::StringProperty> exclude_labels_property_;
 
     std::vector<std::string> exclude_labels_;
 };
