@@ -22,21 +22,21 @@ class EntityVisual
 {
 public:
     // Constructor.  Creates the visual stuff and puts it into the scene, but in an unconfigured state.
-    EntityVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node );
+    EntityVisual(Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node);
 
     // Destructor.  Removes the visual stuff from the scene.
     virtual ~EntityVisual();
 
     // Configure the visual to show the data in the message.
     void setEntityMeshAndAreas(const ed_gui_server_msgs::EntityMeshAndAreas& mesh_and_areas);
-    void setConvexHull ( const ed_gui_server_msgs::Polygon& polygon );
-    void setLabel (const std::string& label );
+    void setConvexHull (const ed_gui_server_msgs::Polygon& polygon);
+    void setLabel (const std::string& label);
 
     void setColor (Ogre::ColourValue c, double entity_label_opacity, double area_opacity, double area_label_opacity);
 
     // Set the pose of the coordinate frame the message refers to.
-    void setFramePosition( const Ogre::Vector3& position );
-    void setFrameOrientation( const Ogre::Quaternion& orientation );
+    void setFramePosition(const Ogre::Vector3& position);
+    void setFrameOrientation(const Ogre::Quaternion& orientation);
 
     // Get mesh revision
     unsigned int getMeshRevision() const { return mesh_revision_; }

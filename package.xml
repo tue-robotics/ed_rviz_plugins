@@ -26,6 +26,6 @@
   <exec_depend>libqt5-widgets</exec_depend>
 
   <export>
-      <rviz plugin="${prefix}/plugin_description.xml"/>
+    <rviz plugin="${prefix}/plugin_description.xml" />
   </export>
 </package>

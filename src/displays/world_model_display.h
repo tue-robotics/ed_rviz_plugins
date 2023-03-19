@@ -41,7 +41,7 @@ private Q_SLOTS:
     void updateExcludeLabels();
 
 private:
-    void processMessage( const ed_gui_server_msgs::EntityInfos::ConstPtr& msg );
+    void processMessage(const ed_gui_server_msgs::EntityInfos::ConstPtr& msg);
 
     ros::ServiceClient service_client_;
     ed_gui_server_msgs::QueryMeshes query_meshes_srv_;

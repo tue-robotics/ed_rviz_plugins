@@ -18,7 +18,7 @@ void getMinMax(const Ogre::Vector3& value, Ogre::Vector3& min_pt, Ogre::Vector3&
   if (value.z < min_pt.z) min_pt.z = value.z;
 }
 
-EntityVisual::EntityVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node )
+EntityVisual::EntityVisual(Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node)
 {
     mesh_revision_ = 0;
 
@@ -26,17 +26,17 @@ EntityVisual::EntityVisual( Ogre::SceneManager* scene_manager, Ogre::SceneNode* 
 
     frame_node_ = parent_node->createChildSceneNode();
 
-    mesh_.reset(new rviz::MeshShape( scene_manager_, frame_node_ ));
-    convex_hull_.reset(new rviz::BillboardLine( scene_manager_, frame_node_ ));
-    label_.reset(new rviz::MovableText( "unknown" ));
+    mesh_.reset(new rviz::MeshShape(scene_manager_, frame_node_));
+    convex_hull_.reset(new rviz::BillboardLine(scene_manager_, frame_node_));
+    label_.reset(new rviz::MovableText("unknown"));
 
-    frame_node_->attachObject( label_.get() );
+    frame_node_->attachObject(label_.get());
 }
 
 EntityVisual::~EntityVisual()
 {
     // Destroy the frame node since we don't need it anymore.
-    scene_manager_->destroySceneNode( frame_node_ );
+    scene_manager_->destroySceneNode(frame_node_);
 }
 
 void EntityVisual::setEntityMeshAndAreas(const ed_gui_server_msgs::EntityMeshAndAreas& mesh_and_areas)
@@ -50,7 +50,7 @@ void EntityVisual::setEntityMeshAndAreas(const ed_gui_server_msgs::EntityMeshAnd
     mesh_->beginTriangles();
 
     // Set vertices
-    for(unsigned int i = 0; i < mesh_and_areas.mesh.vertices.size() / 3 / 3; ++i )
+    for (unsigned int i = 0; i < mesh_and_areas.mesh.vertices.size() / 3 / 3; ++i)
     {
         unsigned int i9 = 9 * i;
 
@@ -83,13 +83,13 @@ void EntityVisual::setEntityMeshAndAreas(const ed_gui_server_msgs::EntityMeshAnd
     // Now set the areas
     for (const ed_gui_server_msgs::Area& a : mesh_and_areas.areas)
     {
-        area_labels_.push_back(boost::shared_ptr<rviz::MovableText>(new rviz::MovableText( a.name )));
+        area_labels_.push_back(boost::shared_ptr<rviz::MovableText>(new rviz::MovableText(a.name)));
         boost::shared_ptr<rviz::MovableText> label = area_labels_.back();
         label->setTextAlignment(rviz::MovableText::H_CENTER, rviz::MovableText::V_CENTER);
         label->setCharacterHeight(0.05);
         label->setCaption(a.name);
 
-        area_meshes_.push_back(boost::shared_ptr<rviz::MeshShape>(new rviz::MeshShape( scene_manager_, frame_node_ )));
+        area_meshes_.push_back(boost::shared_ptr<rviz::MeshShape>(new rviz::MeshShape(scene_manager_, frame_node_)));
         boost::shared_ptr<rviz::MeshShape> mesh = area_meshes_.back();
 
         mesh->estimateVertexCount(a.mesh.vertices.size() / 3);
@@ -99,7 +99,7 @@ void EntityVisual::setEntityMeshAndAreas(const ed_gui_server_msgs::EntityMeshAnd
         Ogre::Vector3 min_pt(1e9, 1e9, 1e9);
 
         // Set vertices
-        for(unsigned int i = 0; i < a.mesh.vertices.size() / 3 / 3; ++i )
+        for (unsigned int i = 0; i < a.mesh.vertices.size() / 3 / 3; ++i)
         {
             unsigned int i9 = 9 * i;
 
@@ -154,14 +154,14 @@ void EntityVisual::setColor(Ogre::ColourValue c, double entity_label_opacity, do
     mesh_->setColor(c);
 }
 
-void EntityVisual::setConvexHull ( const ed_gui_server_msgs::Polygon& polygon )
+void EntityVisual::setConvexHull(const ed_gui_server_msgs::Polygon& polygon)
 {    
     convex_hull_->clear();
     convex_hull_->setMaxPointsPerLine(2);
     convex_hull_->setNumLines(polygon.xs.size() * 3);
     convex_hull_->setLineWidth(0.01);
 
-    for(unsigned int i = 0; i < polygon.xs.size(); ++i)
+    for (unsigned int i = 0; i < polygon.xs.size(); ++i)
     {        
         int j = (i + 1) % polygon.xs.size();
 
@@ -189,7 +189,7 @@ void EntityVisual::setConvexHull ( const ed_gui_server_msgs::Polygon& polygon )
     }
 }
 
-void EntityVisual::setLabel (const std::string& label )
+void EntityVisual::setLabel(const std::string& label)
 {
     label_->setTextAlignment(rviz::MovableText::H_CENTER, rviz::MovableText::V_CENTER);
     // You can't set an empty string as caption. But without setting a caption, its shows 'unknown'
@@ -204,14 +204,14 @@ void EntityVisual::setLabel (const std::string& label )
 }
 
 // Position and orientation are passed through to the SceneNode.
-void EntityVisual::setFramePosition( const Ogre::Vector3& position )
+void EntityVisual::setFramePosition(const Ogre::Vector3& position)
 {
-    frame_node_->setPosition( position );
+    frame_node_->setPosition(position);
 }
 
-void EntityVisual::setFrameOrientation( const Ogre::Quaternion& orientation )
+void EntityVisual::setFrameOrientation(const Ogre::Quaternion& orientation)
 {
-    frame_node_->setOrientation( orientation );
+    frame_node_->setOrientation(orientation);
 }
 
 } // end namespace rviz_plugins
