@@ -1,3 +1,5 @@
+#include <boost/make_shared.hpp>
+
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
 
@@ -89,8 +91,8 @@ WorldModelDisplay::WorldModelDisplay()
     service_name_property_ = std::make_unique<rviz::StringProperty>("Mesh query service name", "ed/gui/query_meshes", "Service name for querying meshes", this, SLOT(updateProperties()));
 
     entity_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity label opacity", 1.0, "Opacity of entity label", this);
-    entity_area_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Area label opacity", 0.4, "Opacity of entity label", this);
-    entity_area_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Area opacity", 0.2, "Opacity of entity label", this);
+    entity_volume_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Volume label opacity", 0.4, "Opacity of entity label", this);
+    entity_volume_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Volume opacity", 0.2, "Opacity of entity label", this);
     exclude_labels_property_ = std::make_unique<rviz::StringProperty>("Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
 
     updateProperties();
@@ -145,7 +147,7 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
             continue;
 
         if (visuals_.find(info.id) == visuals_.end()) // Visual does not exist yet; create visual
-            visuals_[info.id] = boost::shared_ptr<EntityVisual>(new EntityVisual(context_->getSceneManager(), scene_node_));
+            visuals_[info.id] = boost::make_shared<EntityVisual>(context_->getSceneManager(), scene_node_);
 
         boost::shared_ptr<EntityVisual> visual = visuals_[info.id];
 
@@ -164,9 +166,15 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
         visual->setFramePosition(frame_position + position);
         visual->setFrameOrientation(frame_orientation * orientation);
 
-        if (info.mesh_revision > visual->getMeshRevision())
+        bool visual_needs_update = info.visual_revision > visual->visualRevision();
+        bool volumes_needs_update = info.volumes_revision > visual->volumesRevision();
+        if (visual_needs_update || volumes_needs_update)
+        {
             query_meshes_srv_.request.entity_ids.push_back(info.id); // Mesh
-        else if (info.mesh_revision == 0)
+            query_meshes_srv_.request.visual_requests.push_back(visual_needs_update);
+            query_meshes_srv_.request.volumes_requests.push_back(volumes_needs_update);
+        }
+        else if (info.visual_revision == 0)
             visual->setConvexHull(info.polygon); // Convex hull
 
         // Set the color
@@ -185,7 +193,7 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
             b = COLORS[i_color][2];
         }
         visual->setColor(Ogre::ColourValue(r, g, b, 1.0f), entity_label_opacity_property_->getFloat(),
-                         entity_area_opacity_property_->getFloat(), entity_area_label_opacity_property_->getFloat());
+                         entity_volume_opacity_property_->getFloat(), entity_volume_label_opacity_property_->getFloat());
 
         std::string label;
         // exclude label (label remains empty string) in case it starts with one of defined prefixes
@@ -225,7 +233,7 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
                 if (visuals_.find(id) == visuals_.end())
                     continue;
 
-                visuals_[id]->setEntityMeshAndAreas(geom);
+                visuals_[id]->setEntityMeshAndVolumes(geom);
             }
         }
         else

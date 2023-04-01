@@ -8,13 +8,18 @@ project(ed_rviz_plugins)
 add_compile_options(-Wall -Werror=all)
 add_compile_options(-Wextra -Werror=extra)
 
+find_package(Boost REQUIRED)
 find_package(catkin REQUIRED COMPONENTS ed_gui_server_msgs rviz)
 
 catkin_package(
   CATKIN_DEPENDS ed_gui_server_msgs rviz
 )
 
-include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
+include_directories(
+ SYSTEM
+ ${Boost_INCLUDE_DIRS}
+ ${catkin_INCLUDE_DIRS}
+)
 link_directories(${catkin_LIBRARY_DIRS})
 
 # Enable automoc for generating QT moc files
