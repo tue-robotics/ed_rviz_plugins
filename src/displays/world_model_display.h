@@ -40,6 +40,7 @@ protected:
 
 private Q_SLOTS:
     void updateProperties();
+    void updateExcludeEntities();
     void updateExcludeLabels();
 
 private:
@@ -55,8 +56,10 @@ private:
     std::unique_ptr<rviz::FloatProperty> entity_label_opacity_property_;
     std::unique_ptr<rviz::FloatProperty> entity_volume_label_opacity_property_;
     std::unique_ptr<rviz::FloatProperty> entity_volume_opacity_property_;
+    std::unique_ptr<rviz::StringProperty> exclude_entities_property_;
     std::unique_ptr<rviz::StringProperty> exclude_labels_property_;
 
+    std::vector<std::string> exclude_entities_;
     std::vector<std::string> exclude_labels_;
 };
 

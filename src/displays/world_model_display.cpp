@@ -93,6 +93,7 @@ WorldModelDisplay::WorldModelDisplay()
     entity_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity label opacity", 1.0, "Opacity of entity label", this);
     entity_volume_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Volume label opacity", 0.4, "Opacity of entity label", this);
     entity_volume_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Volume opacity", 0.2, "Opacity of entity label", this);
+    exclude_entities_property_ = std::make_unique<rviz::StringProperty>("Exclude entities", "", "Exclude entities starting with (seperate with semi-colons)", this, SLOT(updateExcludeEntities()));
     exclude_labels_property_ = std::make_unique<rviz::StringProperty>("Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
 
     updateProperties();
@@ -105,6 +106,11 @@ void WorldModelDisplay::updateProperties()
 
     ros::NodeHandle nh;
     service_client_ = nh.serviceClient<ed_gui_server_msgs::QueryMeshes>(service_name_property_->getStdString());
+}
+
+void WorldModelDisplay::updateExcludeEntities()
+{
+    exclude_entities_ = split(exclude_entities_property_->getStdString(),';');
 }
 
 void WorldModelDisplay::updateExcludeLabels()
@@ -144,6 +150,10 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
             continue; // Filter floor
 
         if (!info.has_pose)
+            continue;
+
+        if (std::any_of(exclude_entities_.cbegin(), exclude_entities_.cend(), [&info](std::string s){return (info.id.substr(0, s.length()) == s);}))
+            // Skip entities starting with substr from exclude entities.
             continue;
 
         if (visuals_.find(info.id) == visuals_.end()) // Visual does not exist yet; create visual
