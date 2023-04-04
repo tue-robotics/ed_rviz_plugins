@@ -68,17 +68,17 @@ unsigned int djb2(const std::string& str)
 * @param delimeter char on which the string is split
 * @return vector of sub-strings
 */
-std::vector<std::string> split(const std::string& strToSplit, char delimeter)
+std::vector<std::string> split(const std::string& str_to_split, char delimeter)
 {
-   std::stringstream ss(strToSplit);
+   std::stringstream ss(str_to_split);
    std::string item;
-   std::vector<std::string> splittedStrings;
+   std::vector<std::string> splitted_strings;
    while (std::getline(ss, item, delimeter))
    {
        if (!item.empty() && item[0] != delimeter)
-           splittedStrings.push_back(item);
+           splitted_strings.push_back(item);
    }
-   return splittedStrings;
+   return splitted_strings;
 }
 
 // ----------------------------------------------------------------------------------------------------
