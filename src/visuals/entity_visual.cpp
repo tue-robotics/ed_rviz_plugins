@@ -44,7 +44,7 @@ void EntityVisual::setEntityMeshAndVolumes(const ed_gui_server_msgs::EntityMeshA
     mesh_->clear();
 
     // Set mesh revision
-    if (!mesh_and_volumes.mesh.vertices.empty())
+    if (mesh_and_volumes.visual_revision != 0)
     {
         visual_revision_ = mesh_and_volumes.visual_revision;
 
