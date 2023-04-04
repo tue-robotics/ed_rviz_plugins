@@ -274,6 +274,8 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
 
     // No more meshes missing :)
     query_meshes_srv_.request.entity_ids.clear();
+    query_meshes_srv_.request.visual_requests.clear();
+    query_meshes_srv_.request.volumes_requests.clear();
 }
 
 }
