@@ -241,15 +241,15 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
 
     // Check which ids are not present
     std::vector<std::string> ids_to_be_removed;
-    for (std::map<std::string, boost::shared_ptr<EntityVisual> >::const_iterator it = visuals_.begin(); it != visuals_.end(); ++it)
+    for (const auto& kv : visuals_)
     {
-        if (std::find(alive_ids.begin(), alive_ids.end(), it->first) == alive_ids.end()) // Not in alive ids
-            ids_to_be_removed.push_back(it->first);
+        if (std::find(alive_ids.cbegin(), alive_ids.cend(), kv.first) == alive_ids.cend()) // Not in alive ids
+            ids_to_be_removed.push_back(kv.first);
     }
 
     // Remove stale visuals
-    for (std::vector<std::string>::const_iterator it = ids_to_be_removed.begin(); it != ids_to_be_removed.end(); ++it)
-        visuals_.erase(*it);
+    for (const std::string& id : ids_to_be_removed)
+        visuals_.erase(id);
 
     // Perform service call to get missing meshes
     if (!query_meshes_srv_.request.entity_ids.empty())
