@@ -7,6 +7,7 @@
 #include <ed_gui_server_msgs/QueryMeshes.h>
 
 #include <memory>
+#include <regex>
 #endif
 
 namespace Ogre
@@ -41,6 +42,7 @@ protected:
 private Q_SLOTS:
     void updateProperties();
     void updateExcludeEntities();
+    void updateExcludeEntityTypes();
     void updateExcludeLabels();
 
 private:
@@ -57,10 +59,12 @@ private:
     std::unique_ptr<rviz::FloatProperty> entity_volume_label_opacity_property_;
     std::unique_ptr<rviz::FloatProperty> entity_volume_opacity_property_;
     std::unique_ptr<rviz::StringProperty> exclude_entities_property_;
+    std::unique_ptr<rviz::StringProperty> exclude_entity_types_propetry_;
     std::unique_ptr<rviz::StringProperty> exclude_labels_property_;
 
-    std::vector<std::string> exclude_entities_;
-    std::vector<std::string> exclude_labels_;
+    std::vector<std::regex> exclude_entities_;
+    std::vector<std::regex> exclude_entity_types_;
+    std::vector<std::regex> exclude_labels_;
 };
 
 }

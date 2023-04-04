@@ -83,6 +83,16 @@ std::vector<std::string> split(const std::string& str_to_split, char delimeter)
 
 // ----------------------------------------------------------------------------------------------------
 
+void stringsToRegexs(const std::string& str_to_split, std::vector<std::regex>& v_regex, char delimeter=';')
+{
+    std::vector<std::string> splitted_strings = split(str_to_split, delimeter);
+    v_regex.clear();
+    v_regex.reserve(splitted_strings.size());
+    std::transform(splitted_strings.cbegin(), splitted_strings.cend(), std::back_inserter(v_regex), [](const std::string& str) { return std::regex(str, std::regex_constants::icase); });
+}
+
+// ----------------------------------------------------------------------------------------------------
+
 namespace ed_rviz_plugins
 {
 
@@ -93,8 +103,9 @@ WorldModelDisplay::WorldModelDisplay()
     entity_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity label opacity", 1.0, "Opacity of entity label", this);
     entity_volume_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Volume label opacity", 0.4, "Opacity of entity label", this);
     entity_volume_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Volume opacity", 0.2, "Opacity of entity label", this);
-    exclude_entities_property_ = std::make_unique<rviz::StringProperty>("Exclude entities", "", "Exclude entities starting with (seperate with semi-colons)", this, SLOT(updateExcludeEntities()));
-    exclude_labels_property_ = std::make_unique<rviz::StringProperty>("Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
+    exclude_entities_property_ = std::make_unique<rviz::StringProperty>("Exclude entities", "", "Exclude entities regex (seperate with semi-colons)", this, SLOT(updateExcludeEntities()));
+    exclude_entity_types_propetry_ = std::make_unique<rviz::StringProperty>("Exclude entity types", "", "Exclude entity types regex (seperate with semi-colons)", this, SLOT(updateExcludeEntityTypes()));
+    exclude_labels_property_ = std::make_unique<rviz::StringProperty>("Exclude labels", "", "Exclude labels regex (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
 
     updateProperties();
 }
@@ -110,12 +121,17 @@ void WorldModelDisplay::updateProperties()
 
 void WorldModelDisplay::updateExcludeEntities()
 {
-    exclude_entities_ = split(exclude_entities_property_->getStdString(),';');
+    stringsToRegexs(exclude_entities_property_->getStdString(), exclude_entities_);
+}
+
+void WorldModelDisplay::updateExcludeEntityTypes()
+{
+    stringsToRegexs(exclude_entity_types_propetry_->getStdString(), exclude_entity_types_);
 }
 
 void WorldModelDisplay::updateExcludeLabels()
 {
-    exclude_labels_ = split(exclude_labels_property_->getStdString(),';');
+    stringsToRegexs(exclude_labels_property_->getStdString(), exclude_labels_);
 }
 
 void WorldModelDisplay::onInitialize()
@@ -152,8 +168,12 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
         if (!info.has_pose)
             continue;
 
-        if (std::any_of(exclude_entities_.cbegin(), exclude_entities_.cend(), [&info](std::string s){return (info.id.substr(0, s.length()) == s);}))
-            // Skip entities starting with substr from exclude entities.
+        if (std::any_of(exclude_entities_.cbegin(), exclude_entities_.cend(), [&info](const std::regex& regex){ return std::regex_match(info.id, regex); }))
+            // Skip entities matching the regexs from exclude entities.
+            continue;
+
+        if (std::any_of(exclude_entity_types_.cbegin(), exclude_entity_types_.cend(), [&info](const std::regex& regex){ return std::regex_match(info.type, regex); }))
+            // Skip entities having a matching type according the regexs from exclude entity types.
             continue;
 
         if (visuals_.find(info.id) == visuals_.end()) // Visual does not exist yet; create visual
@@ -207,7 +227,7 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
 
         std::string label;
         // exclude label (label remains empty string) in case it starts with one of defined prefixes
-        if (std::none_of(exclude_labels_.cbegin(), exclude_labels_.cend(), [&info](std::string s){return (info.id.substr(0, s.length()) == s);}))
+        if (std::none_of(exclude_labels_.cbegin(), exclude_labels_.cend(), [&info](const std::regex& regex){ return std::regex_match(info.id, regex); }))
         {
             label = info.id.substr(0, 6);
 
