@@ -1,3 +1,5 @@
+#include <boost/make_shared.hpp>
+
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
 
@@ -66,17 +68,27 @@ unsigned int djb2(const std::string& str)
 * @param delimeter char on which the string is split
 * @return vector of sub-strings
 */
-std::vector<std::string> split(const std::string& strToSplit, char delimeter)
+std::vector<std::string> split(const std::string& str_to_split, char delimeter)
 {
-   std::stringstream ss(strToSplit);
+   std::stringstream ss(str_to_split);
    std::string item;
-   std::vector<std::string> splittedStrings;
+   std::vector<std::string> splitted_strings;
    while (std::getline(ss, item, delimeter))
    {
        if (!item.empty() && item[0] != delimeter)
-           splittedStrings.push_back(item);
+           splitted_strings.push_back(item);
    }
-   return splittedStrings;
+   return splitted_strings;
+}
+
+// ----------------------------------------------------------------------------------------------------
+
+void stringsToRegexs(const std::string& str_to_split, std::vector<std::regex>& v_regex, char delimeter=';')
+{
+    std::vector<std::string> splitted_strings = split(str_to_split, delimeter);
+    v_regex.clear();
+    v_regex.reserve(splitted_strings.size());
+    std::transform(splitted_strings.cbegin(), splitted_strings.cend(), std::back_inserter(v_regex), [](const std::string& str) { return std::regex(str, std::regex_constants::icase); });
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -89,9 +101,11 @@ WorldModelDisplay::WorldModelDisplay()
     service_name_property_ = std::make_unique<rviz::StringProperty>("Mesh query service name", "ed/gui/query_meshes", "Service name for querying meshes", this, SLOT(updateProperties()));
 
     entity_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity label opacity", 1.0, "Opacity of entity label", this);
-    entity_area_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Area label opacity", 0.4, "Opacity of entity label", this);
-    entity_area_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Area opacity", 0.2, "Opacity of entity label", this);
-    exclude_labels_property_ = std::make_unique<rviz::StringProperty>("Exclude labels", "", "Exclude labels starting with (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
+    entity_volume_label_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Volume label opacity", 0.4, "Opacity of entity label", this);
+    entity_volume_opacity_property_ = std::make_unique<rviz::FloatProperty>("Entity Volume opacity", 0.2, "Opacity of entity label", this);
+    exclude_entities_property_ = std::make_unique<rviz::StringProperty>("Exclude entities", "", "Exclude entities regex (seperate with semi-colons)", this, SLOT(updateExcludeEntities()));
+    exclude_entity_types_propetry_ = std::make_unique<rviz::StringProperty>("Exclude entity types", "", "Exclude entity types regex (seperate with semi-colons)", this, SLOT(updateExcludeEntityTypes()));
+    exclude_labels_property_ = std::make_unique<rviz::StringProperty>("Exclude labels", "", "Exclude labels regex (seperate with semi-colons)", this, SLOT(updateExcludeLabels()));
 
     updateProperties();
 }
@@ -105,9 +119,19 @@ void WorldModelDisplay::updateProperties()
     service_client_ = nh.serviceClient<ed_gui_server_msgs::QueryMeshes>(service_name_property_->getStdString());
 }
 
+void WorldModelDisplay::updateExcludeEntities()
+{
+    stringsToRegexs(exclude_entities_property_->getStdString(), exclude_entities_);
+}
+
+void WorldModelDisplay::updateExcludeEntityTypes()
+{
+    stringsToRegexs(exclude_entity_types_propetry_->getStdString(), exclude_entity_types_);
+}
+
 void WorldModelDisplay::updateExcludeLabels()
 {
-    exclude_labels_ = split(exclude_labels_property_->getStdString(),';');
+    stringsToRegexs(exclude_labels_property_->getStdString(), exclude_labels_);
 }
 
 void WorldModelDisplay::onInitialize()
@@ -144,8 +168,16 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
         if (!info.has_pose)
             continue;
 
+        if (std::any_of(exclude_entities_.cbegin(), exclude_entities_.cend(), [&info](const std::regex& regex){ return std::regex_match(info.id, regex); }))
+            // Skip entities matching the regexs from exclude entities.
+            continue;
+
+        if (std::any_of(exclude_entity_types_.cbegin(), exclude_entity_types_.cend(), [&info](const std::regex& regex){ return std::regex_match(info.type, regex); }))
+            // Skip entities having a matching type according the regexs from exclude entity types.
+            continue;
+
         if (visuals_.find(info.id) == visuals_.end()) // Visual does not exist yet; create visual
-            visuals_[info.id] = boost::shared_ptr<EntityVisual>(new EntityVisual(context_->getSceneManager(), scene_node_));
+            visuals_[info.id] = boost::make_shared<EntityVisual>(context_->getSceneManager(), scene_node_);
 
         boost::shared_ptr<EntityVisual> visual = visuals_[info.id];
 
@@ -164,9 +196,15 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
         visual->setFramePosition(frame_position + position);
         visual->setFrameOrientation(frame_orientation * orientation);
 
-        if (info.mesh_revision > visual->getMeshRevision())
+        bool visual_needs_update = info.visual_revision > visual->visualRevision();
+        bool volumes_needs_update = info.volumes_revision > visual->volumesRevision();
+        if (visual_needs_update || volumes_needs_update)
+        {
             query_meshes_srv_.request.entity_ids.push_back(info.id); // Mesh
-        else if (info.mesh_revision == 0)
+            query_meshes_srv_.request.visual_requests.push_back(visual_needs_update);
+            query_meshes_srv_.request.volumes_requests.push_back(volumes_needs_update);
+        }
+        else if (info.visual_revision == 0)
             visual->setConvexHull(info.polygon); // Convex hull
 
         // Set the color
@@ -185,11 +223,11 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
             b = COLORS[i_color][2];
         }
         visual->setColor(Ogre::ColourValue(r, g, b, 1.0f), entity_label_opacity_property_->getFloat(),
-                         entity_area_opacity_property_->getFloat(), entity_area_label_opacity_property_->getFloat());
+                         entity_volume_opacity_property_->getFloat(), entity_volume_label_opacity_property_->getFloat());
 
         std::string label;
         // exclude label (label remains empty string) in case it starts with one of defined prefixes
-        if (std::none_of(exclude_labels_.cbegin(), exclude_labels_.cend(), [&info](std::string s){return (info.id.substr(0, s.length()) == s);}))
+        if (std::none_of(exclude_labels_.cbegin(), exclude_labels_.cend(), [&info](const std::regex& regex){ return std::regex_match(info.id, regex); }))
         {
             label = info.id.substr(0, 6);
 
@@ -203,15 +241,15 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
 
     // Check which ids are not present
     std::vector<std::string> ids_to_be_removed;
-    for (std::map<std::string, boost::shared_ptr<EntityVisual> >::const_iterator it = visuals_.begin(); it != visuals_.end(); ++it)
+    for (const auto& kv : visuals_)
     {
-        if (std::find(alive_ids.begin(), alive_ids.end(), it->first) == alive_ids.end()) // Not in alive ids
-            ids_to_be_removed.push_back(it->first);
+        if (std::find(alive_ids.cbegin(), alive_ids.cend(), kv.first) == alive_ids.cend()) // Not in alive ids
+            ids_to_be_removed.push_back(kv.first);
     }
 
     // Remove stale visuals
-    for (std::vector<std::string>::const_iterator it = ids_to_be_removed.begin(); it != ids_to_be_removed.end(); ++it)
-        visuals_.erase(*it);
+    for (const std::string& id : ids_to_be_removed)
+        visuals_.erase(id);
 
     // Perform service call to get missing meshes
     if (!query_meshes_srv_.request.entity_ids.empty())
@@ -225,7 +263,7 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
                 if (visuals_.find(id) == visuals_.end())
                     continue;
 
-                visuals_[id]->setEntityMeshAndAreas(geom);
+                visuals_[id]->setEntityMeshAndVolumes(geom);
             }
         }
         else
@@ -236,6 +274,8 @@ void WorldModelDisplay::processMessage(const ed_gui_server_msgs::EntityInfos::Co
 
     // No more meshes missing :)
     query_meshes_srv_.request.entity_ids.clear();
+    query_meshes_srv_.request.visual_requests.clear();
+    query_meshes_srv_.request.volumes_requests.clear();
 }
 
 }

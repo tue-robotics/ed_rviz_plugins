@@ -1,11 +1,13 @@
 #ifndef ENTITY_VISUAL_H
 #define ENTITY_VISUAL_H
 
+#include <boost/shared_ptr.hpp>
+
 #include <rviz/ogre_helpers/mesh_shape.h>
 #include <rviz/ogre_helpers/billboard_line.h>
 #include <rviz/ogre_helpers/movable_text.h>
 
-#include <ed_gui_server_msgs/EntityMeshAndAreas.h>
+#include <ed_gui_server_msgs/EntityMeshAndVolumes.h>
 #include <ed_gui_server_msgs/Polygon.h>
 
 namespace Ogre
@@ -28,7 +30,7 @@ public:
     virtual ~EntityVisual();
 
     // Configure the visual to show the data in the message.
-    void setEntityMeshAndAreas(const ed_gui_server_msgs::EntityMeshAndAreas& mesh_and_areas);
+    void setEntityMeshAndVolumes(const ed_gui_server_msgs::EntityMeshAndVolumes& mesh_and_areas);
     void setConvexHull (const ed_gui_server_msgs::Polygon& polygon);
     void setLabel (const std::string& label);
 
@@ -38,15 +40,17 @@ public:
     void setFramePosition(const Ogre::Vector3& position);
     void setFrameOrientation(const Ogre::Quaternion& orientation);
 
-    // Get mesh revision
-    unsigned int getMeshRevision() const { return mesh_revision_; }
+    // Get revisions
+    unsigned long visualRevision() const { return visual_revision_; }
+    unsigned long volumesRevision() const { return volumes_revision_; }
 
 private:
     // The actual scene objects
     boost::shared_ptr<rviz::MeshShape> mesh_;
-    std::vector<boost::shared_ptr<rviz::MeshShape> > area_meshes_;
-    std::vector<boost::shared_ptr<rviz::MovableText> > area_labels_;
-    unsigned int mesh_revision_;
+    std::vector<boost::shared_ptr<rviz::MeshShape> > volume_meshes_;
+    std::vector<boost::shared_ptr<rviz::MovableText> > volume_labels_;
+    unsigned long visual_revision_;
+    unsigned long volumes_revision_;
 
     boost::shared_ptr<rviz::BillboardLine> convex_hull_;
 
