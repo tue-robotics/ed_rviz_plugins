@@ -8,18 +8,19 @@ Visualizes the `ed_gui_server` output in RVIZ.
 
 Depends on:
 
-- <https://github.com/tue-robotics/ed.git>
-- <https://github.com/tue-robotics/ed_gui_server.git>
+- <https://github.com/tue-robotics/ed.git> (ROS 2 branch)
+- <https://github.com/tue-robotics/ed_gui_server/tree/ros2> (ROS 2 branch; provides `ed_gui_server_interfaces`)
 
-Check out the following packages in your workspace:
+Check out the ROS 2 packages in your workspace:
 
-    cd <your_catkin_workspace>/src
-    git clone https://github.com/tue-robotics/ed_rviz_plugins.git
+    cd <your_ros2_workspace>/src
+    git clone -b ros2 https://github.com/tue-robotics/ed_gui_server.git
+    git clone -b ros2 https://github.com/tue-robotics/ed_rviz_plugins.git
 
-And compile
+Build with colcon:
 
-    cd <your_catkin_workspace>
-    catkin build
+    cd <your_ros2_workspace>
+    colcon build --packages-up-to ed_rviz_plugins
 
 ## Tutorial
 

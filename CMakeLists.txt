@@ -1,91 +1,78 @@
-## BEGIN_TUTORIAL
-## This CMakeLists.txt file for rviz_plugin_tutorials builds both the TeleopPanel tutorial and the ImuDisplay tutorial.
-##
-## First start with some standard catkin stuff.
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 project(ed_rviz_plugins)
 
-add_compile_options(-Wall -Werror=all)
-add_compile_options(-Wextra -Werror=extra)
-
-find_package(Boost REQUIRED)
-find_package(catkin REQUIRED COMPONENTS ed_gui_server_msgs rviz)
-
-catkin_package(
-  CATKIN_DEPENDS ed_gui_server_msgs rviz
-)
-
-include_directories(
- SYSTEM
- ${Boost_INCLUDE_DIRS}
- ${catkin_INCLUDE_DIRS}
-)
-link_directories(${catkin_LIBRARY_DIRS})
-
-# Enable automoc for generating QT moc files
-set(CMAKE_AUTOMOC ON)
-## This plugin includes Qt widgets, so we must include Qt.
-## We'll use the version that rviz used so they are compatible.
-if(rviz_QT_VERSION VERSION_LESS "5")
-    message(STATUS "Using Qt4 based on the rviz_QT_VERSION: ${rviz_QT_VERSION}")
-    find_package(Qt4 ${rviz_QT_VERSION} EXACT REQUIRED QtCore QtGui)
-    ## pull in all required include dirs, define QT_LIBRARIES, etc.
-    include(${QT_USE_FILE})
-else()
-    message(STATUS "Using Qt5 based on the rviz_QT_VERSION: ${rviz_QT_VERSION}")
-    find_package(Qt5 ${rviz_QT_VERSION} EXACT REQUIRED Core Widgets)
-    ## make target_link_libraries(${QT_LIBRARIES}) pull in all required dependencies
-    set(QT_LIBRARIES Qt5::Widgets)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Werror=all)
+  add_compile_options(-Wextra -Werror=extra)
+endif()
 add_compile_options(-DQT_NO_KEYWORDS)
 
-set(SOURCE_FILES
+find_package(ament_cmake REQUIRED)
+find_package(ed_gui_server_interfaces REQUIRED)
+find_package(pluginlib REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rviz_common REQUIRED)
+find_package(rviz_rendering REQUIRED)
+find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
+
+set(CMAKE_AUTOMOC ON)
+
+add_library(${PROJECT_NAME} SHARED
   src/displays/world_model_display.cpp
   src/visuals/entity_visual.cpp
 )
-
-## An rviz plugin is just a shared library, so here we declare the
-## library to be called ``${PROJECT_NAME}`` (which is
-## "rviz_plugins", or whatever your version of this project
-## is called) and specify the list of source files we collected above
-## in ``${SOURCE_FILES}``.
-add_library(${PROJECT_NAME} ${SOURCE_FILES})
-
-## Link the library with whatever Qt libraries have been defined by
-## the ``find_package(Qt4 ...)`` line above, and with whatever libraries
-## catkin has included.
-##
-## Although this puts "rviz_plugins" (or whatever you have
-## called the project) as the name of the library, cmake knows it is a
-## library and names the actual file something like
-## "librviz_plugins.so", or whatever is appropriate for your
-## particular OS.
-target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${catkin_LIBRARIES})
-## END_TUTORIAL
-
-
-## Install rules
-
-install(TARGETS
-  ${PROJECT_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+target_link_libraries(${PROJECT_NAME}
+  Qt5::Core
+  Qt5::Widgets
+  ed_gui_server_interfaces::ed_gui_server_interfaces__rosidl_typesupport_cpp
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  rviz_common::rviz_common
+  rviz_rendering::rviz_rendering
 )
 
-install(FILES 
-  plugin_description.xml
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+pluginlib_export_plugin_description_file(rviz_common plugin_description.xml)
 
+install(TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib/${PROJECT_NAME}
+  RUNTIME DESTINATION bin
+)
+install(FILES plugin_description.xml
+  DESTINATION share/${PROJECT_NAME}
+)
 install(DIRECTORY icons/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/icons)
-
+  DESTINATION share/${PROJECT_NAME}/icons
+)
 install(PROGRAMS scripts/send_test_msgs.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  DESTINATION lib/${PROJECT_NAME}
+)
 
-if(CATKIN_ENABLE_TESTING)
-  find_package(catkin_lint_cmake REQUIRED)
-  catkin_add_catkin_lint_test("-W2 --ignore LINK_DIRECTORY")
+if(BUILD_TESTING)
+  find_package(ament_cmake_clang_format REQUIRED)
+  find_package(ament_cmake_clang_tidy REQUIRED)
+  find_package(ament_cmake_lint_cmake REQUIRED)
+  find_package(ament_cmake_xmllint REQUIRED)
+  find_package(tue_lint_config REQUIRED)
+
+  ament_clang_format(
+    CONFIG_FILE ${tue_lint_config_DIR}/../config/.clang-format
+    --clang-format-version=21
+  )
+  ament_clang_tidy(
+    CONFIG_FILE ${tue_lint_config_DIR}/../config/.clang-tidy
+    --clang-tidy-version=21
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/compile_commands.json
+  )
+  ament_lint_cmake(MAX_LINE_LENGTH 120)
+  ament_xmllint(MAX_LINE_LENGTH 120)
 endif()
 
+ament_package()
