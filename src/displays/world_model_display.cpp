@@ -1,22 +1,31 @@
-#include <OGRE/OgreSceneManager.h>
-#include <OGRE/OgreSceneNode.h>
+#include "world_model_display.h"
 
+#include "../visuals/entity_visual.h"
+
+#include <ed_gui_server_interfaces/msg/entity_infos.hpp>
+#include <ed_gui_server_interfaces/srv/query_meshes.hpp>
+#include <OgreColourValue.h>
+#include <OgrePrerequisites.h>
+#include <OgreQuaternion.h>
 #include <pluginlib/class_list_macros.hpp>
+#include <rclcpp/logging.hpp>
+#include <rviz_common/display.hpp>
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/status_property.hpp>
 #include <rviz_common/properties/string_property.hpp>
 
+#include <qobjectdefs.h>
 #include <QTimer>
-
-#include "../visuals/entity_visual.h"
-#include "world_model_display.h"
 
 #include <algorithm>
 #include <chrono>
 #include <future>
 #include <iterator>
+#include <memory>
+#include <regex>
 #include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -60,10 +69,9 @@ void stringsToRegexes(const std::string& str_to_split, std::vector<std::regex>& 
     const auto strings = split(str_to_split, delimiter);
     regexes.clear();
     regexes.reserve(strings.size());
-    std::transform(strings.cbegin(),
-                   strings.cend(),
-                   std::back_inserter(regexes),
-                   [](const std::string& str) { return std::regex(str, std::regex_constants::icase); });
+    std::ranges::transform(strings,
+                           std::back_inserter(regexes),
+                           [](const std::string& str) { return std::regex(str, std::regex_constants::icase); });
 }
 
 } // namespace
@@ -210,39 +218,41 @@ void WorldModelDisplay::processMessage(ed_gui_server_interfaces::msg::EntityInfo
     auto query = std::make_shared<ed_gui_server_interfaces::srv::QueryMeshes::Request>();
     for (const auto& info : msg->entities)
     {
-        if (info.id.size() >= 5 && (info.id.substr(info.id.size() - 5) == "floor" || info.id.substr(0, 5) == "floor"))
+        if (info.id.starts_with("floor") || info.id.ends_with("floor"))
             continue;
 
         if (!info.has_pose)
             continue;
 
-        if (std::any_of(exclude_entities_.cbegin(),
-                        exclude_entities_.cend(),
-                        [&info](const std::regex& regex) { return std::regex_match(info.id, regex); }))
+        if (std::ranges::any_of(exclude_entities_,
+                                [&info](const std::regex& regex) { return std::regex_match(info.id, regex); }))
             continue;
 
-        if (std::any_of(exclude_entity_types_.cbegin(),
-                        exclude_entity_types_.cend(),
-                        [&info](const std::regex& regex) { return std::regex_match(info.type, regex); }))
+        if (std::ranges::any_of(exclude_entity_types_,
+                                [&info](const std::regex& regex) { return std::regex_match(info.type, regex); }))
             continue;
 
-        if (visuals_.find(info.id) == visuals_.end())
+        if (!visuals_.contains(info.id))
         {
             visuals_[info.id] = std::make_shared<EntityVisual>(context_->getSceneManager(), scene_node_);
         }
 
         const auto& visual = visuals_[info.id];
 
-        Ogre::Vector3 position(info.pose.position.x, info.pose.position.y, info.pose.position.z);
-        Ogre::Quaternion orientation(
-            info.pose.orientation.w, info.pose.orientation.x, info.pose.orientation.y, info.pose.orientation.z);
-        visual->setFramePosition(frame_position + position);
+        // Per component instead of Ogre::Vector3::operator+, see triangleNormal() in entity_visual.cpp
+        const Ogre::Vector3 position(frame_position.x + static_cast<Ogre::Real>(info.pose.position.x),
+                                     frame_position.y + static_cast<Ogre::Real>(info.pose.position.y),
+                                     frame_position.z + static_cast<Ogre::Real>(info.pose.position.z));
+        const Ogre::Quaternion orientation(static_cast<Ogre::Real>(info.pose.orientation.w),
+                                           static_cast<Ogre::Real>(info.pose.orientation.x),
+                                           static_cast<Ogre::Real>(info.pose.orientation.y),
+                                           static_cast<Ogre::Real>(info.pose.orientation.z));
+        visual->setFramePosition(position);
         visual->setFrameOrientation(frame_orientation * orientation);
 
         const bool visual_needs_update = info.visual_revision > visual->visualRevision();
         const bool volumes_need_update = info.volumes_revision > visual->volumesRevision();
-        if ((visual_needs_update || volumes_need_update) &&
-            pending_entity_ids_.find(info.id) == pending_entity_ids_.end())
+        if ((visual_needs_update || volumes_need_update) && !pending_entity_ids_.contains(info.id))
         {
             query->entity_ids.push_back(info.id);
             query->visual_requests.push_back(visual_needs_update);
@@ -253,31 +263,26 @@ void WorldModelDisplay::processMessage(ed_gui_server_interfaces::msg::EntityInfo
             visual->setConvexHull(info.polygon);
         }
 
-        double r;
-        double g;
-        double b;
+        Ogre::ColourValue color;
         if (info.color.a != 0)
         {
-            r = static_cast<float>(info.color.r) / 255;
-            g = static_cast<float>(info.color.g) / 255;
-            b = static_cast<float>(info.color.b) / 255;
+            color = Ogre::ColourValue(static_cast<float>(info.color.r) / 255,
+                                      static_cast<float>(info.color.g) / 255,
+                                      static_cast<float>(info.color.b) / 255);
         }
         else
         {
             const unsigned int color_index = djb2(info.id) % 27;
-            r = COLORS[color_index][0];
-            g = COLORS[color_index][1];
-            b = COLORS[color_index][2];
+            color = Ogre::ColourValue(COLORS[color_index][0], COLORS[color_index][1], COLORS[color_index][2]);
         }
-        visual->setColor(Ogre::ColourValue(r, g, b, 1.0f),
+        visual->setColor(color,
                          entity_label_opacity_property_->getFloat(),
                          entity_volume_opacity_property_->getFloat(),
                          entity_volume_label_opacity_property_->getFloat());
 
         std::string label;
-        if (std::none_of(exclude_labels_.cbegin(),
-                         exclude_labels_.cend(),
-                         [&info](const std::regex& regex) { return std::regex_match(info.id, regex); }))
+        if (std::ranges::none_of(exclude_labels_,
+                                 [&info](const std::regex& regex) { return std::regex_match(info.id, regex); }))
         {
             label = info.id.substr(0, 6);
             if (!info.type.empty())
@@ -290,7 +295,7 @@ void WorldModelDisplay::processMessage(ed_gui_server_interfaces::msg::EntityInfo
     std::vector<std::string> ids_to_be_removed;
     for (const auto& entry : visuals_)
     {
-        if (std::find(alive_ids.cbegin(), alive_ids.cend(), entry.first) == alive_ids.cend())
+        if (std::ranges::find(alive_ids, entry.first) == alive_ids.cend())
             ids_to_be_removed.push_back(entry.first);
     }
     for (const auto& id : ids_to_be_removed)

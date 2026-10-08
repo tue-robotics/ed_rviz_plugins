@@ -1,8 +1,23 @@
-#include <OGRE/OgreSceneManager.h>
-#include <OGRE/OgreSceneNode.h>
-#include <OGRE/OgreVector3.h>
-
 #include "entity_visual.h"
+
+#include <ed_gui_server_interfaces/msg/entity_mesh_and_volumes.hpp>
+#include <ed_gui_server_interfaces/msg/polygon.hpp>
+#include <OgreColourValue.h>
+#include <OgrePrerequisites.h>
+#include <OgreQuaternion.h>
+#include <OgreSceneManager.h>
+#include <OgreSceneNode.h>
+#include <rviz_rendering/objects/billboard_line.hpp>
+#include <rviz_rendering/objects/mesh_shape.hpp>
+#include <rviz_rendering/objects/movable_text.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace ed_rviz_plugins
 {
@@ -12,19 +27,27 @@ namespace
 
 void getMinMax(const Ogre::Vector3& value, Ogre::Vector3& min_pt, Ogre::Vector3& max_pt)
 {
-    if (value.x > max_pt.x)
-        max_pt.x = value.x;
-    if (value.y > max_pt.y)
-        max_pt.y = value.y;
-    if (value.z > max_pt.z)
-        max_pt.z = value.z;
+    max_pt.x = std::max(max_pt.x, value.x);
+    max_pt.y = std::max(max_pt.y, value.y);
+    max_pt.z = std::max(max_pt.z, value.z);
 
-    if (value.x < min_pt.x)
-        min_pt.x = value.x;
-    if (value.y < min_pt.y)
-        min_pt.y = value.y;
-    if (value.z < min_pt.z)
-        min_pt.z = value.z;
+    min_pt.x = std::min(min_pt.x, value.x);
+    min_pt.y = std::min(min_pt.y, value.y);
+    min_pt.z = std::min(min_pt.z, value.z);
+}
+
+// Ogre::Vector3's arithmetic operators (operator-, dotProduct, normalise, ...) loop over ptr()[i] starting from &x,
+// which clang-analyzer reports as out of bounds (security.ArrayBound) inside OgreVector.h, where it cannot be
+// suppressed. So compute the normal per component; same result as (v1 - v3).crossProduct(v2 - v3).normalisedCopy().
+Ogre::Vector3 triangleNormal(const Ogre::Vector3& v1, const Ogre::Vector3& v2, const Ogre::Vector3& v3)
+{
+    const Ogre::Vector3 edge1(v1.x - v3.x, v1.y - v3.y, v1.z - v3.z);
+    const Ogre::Vector3 edge2(v2.x - v3.x, v2.y - v3.y, v2.z - v3.z);
+    const Ogre::Vector3 cross = edge1.crossProduct(edge2);
+    const Ogre::Real length = std::sqrt((cross.x * cross.x) + (cross.y * cross.y) + (cross.z * cross.z));
+    if (length <= 0)
+        return cross;
+    return {cross.x / length, cross.y / length, cross.z / length};
 }
 
 void addTriangleSoup(const std::vector<float>& vertices,
@@ -35,9 +58,9 @@ void addTriangleSoup(const std::vector<float>& vertices,
     for (std::size_t i = 0; i < vertices.size() / 9; ++i)
     {
         const std::size_t offset = 9 * i;
-        Ogre::Vector3 v1(vertices[offset], vertices[offset + 1], vertices[offset + 2]);
-        Ogre::Vector3 v2(vertices[offset + 3], vertices[offset + 4], vertices[offset + 5]);
-        Ogre::Vector3 v3(vertices[offset + 6], vertices[offset + 7], vertices[offset + 8]);
+        const Ogre::Vector3 v1(vertices[offset], vertices[offset + 1], vertices[offset + 2]);
+        const Ogre::Vector3 v2(vertices[offset + 3], vertices[offset + 4], vertices[offset + 5]);
+        const Ogre::Vector3 v3(vertices[offset + 6], vertices[offset + 7], vertices[offset + 8]);
 
         if (min_pt && max_pt)
         {
@@ -46,7 +69,7 @@ void addTriangleSoup(const std::vector<float>& vertices,
             getMinMax(v3, *min_pt, *max_pt);
         }
 
-        const Ogre::Vector3 normal = (v1 - v3).crossProduct(v2 - v3).normalisedCopy();
+        const Ogre::Vector3 normal = triangleNormal(v1, v2, v3);
         mesh.addVertex(v1, normal);
         mesh.addVertex(v2, normal);
         mesh.addVertex(v3, normal);
@@ -56,9 +79,9 @@ void addTriangleSoup(const std::vector<float>& vertices,
 } // namespace
 
 EntityVisual::EntityVisual(Ogre::SceneManager* scene_manager, Ogre::SceneNode* parent_node) :
-    visual_revision_(0), volumes_revision_(0), frame_node_(nullptr), scene_manager_(scene_manager)
+    visual_revision_(0), volumes_revision_(0), frame_node_(parent_node->createChildSceneNode()),
+    scene_manager_(scene_manager)
 {
-    frame_node_ = parent_node->createChildSceneNode();
     mesh_ = std::make_shared<rviz_rendering::MeshShape>(scene_manager_, frame_node_);
     convex_hull_ = std::make_shared<rviz_rendering::BillboardLine>(scene_manager_, frame_node_);
     label_ = std::make_shared<rviz_rendering::MovableText>("unknown");
@@ -113,9 +136,9 @@ void EntityVisual::setEntityMeshAndVolumes(const ed_gui_server_interfaces::msg::
 }
 
 void EntityVisual::setColor(Ogre::ColourValue color,
-                            double entity_label_opacity,
-                            double area_opacity,
-                            double area_label_opacity)
+                            float entity_label_opacity,
+                            float area_opacity,
+                            float area_label_opacity)
 {
     label_->setColor(Ogre::ColourValue(1.0f, 1.0f, 1.0f, entity_label_opacity));
 

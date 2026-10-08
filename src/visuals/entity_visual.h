@@ -3,7 +3,9 @@
 
 #include <ed_gui_server_interfaces/msg/entity_mesh_and_volumes.hpp>
 #include <ed_gui_server_interfaces/msg/polygon.hpp>
-#include <OGRE/OgreColourValue.h>
+#include <OgreColourValue.h>
+#include <OgreQuaternion.h>
+#include <OgreVector.h>
 #include <rviz_rendering/objects/billboard_line.hpp>
 #include <rviz_rendering/objects/mesh_shape.hpp>
 #include <rviz_rendering/objects/movable_text.hpp>
@@ -16,8 +18,6 @@ namespace Ogre
 {
 class SceneManager;
 class SceneNode;
-class Vector3;
-class Quaternion;
 } // namespace Ogre
 
 namespace ed_rviz_plugins
@@ -33,7 +33,7 @@ public:
     void setConvexHull(const ed_gui_server_interfaces::msg::Polygon& polygon);
     void setLabel(const std::string& label);
 
-    void setColor(Ogre::ColourValue color, double entity_label_opacity, double area_opacity, double area_label_opacity);
+    void setColor(Ogre::ColourValue color, float entity_label_opacity, float area_opacity, float area_label_opacity);
 
     void setFramePosition(const Ogre::Vector3& position);
     void setFrameOrientation(const Ogre::Quaternion& orientation);

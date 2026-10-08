@@ -3,7 +3,7 @@ project(ed_rviz_plugins)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -18,24 +18,35 @@ find_package(ed_gui_server_interfaces REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rviz_common REQUIRED)
+find_package(rviz_ogre_vendor REQUIRED)
 find_package(rviz_rendering REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
 
-set(CMAKE_AUTOMOC ON)
-
-add_library(${PROJECT_NAME} SHARED
-  src/displays/world_model_display.cpp
-  src/visuals/entity_visual.cpp
-)
-target_link_libraries(${PROJECT_NAME}
+set(${PROJECT_NAME}_DEPENDENCIES
   Qt5::Core
   Qt5::Widgets
   ed_gui_server_interfaces::ed_gui_server_interfaces__rosidl_typesupport_cpp
   pluginlib::pluginlib
   rclcpp::rclcpp
   rviz_common::rviz_common
+  rviz_ogre_vendor::OgreMain
   rviz_rendering::rviz_rendering
 )
+
+# Generated moc code is kept out of compile_commands.json, so clang-tidy only checks our own sources
+set(CMAKE_EXPORT_COMPILE_COMMANDS OFF)
+qt5_wrap_cpp(${PROJECT_NAME}_MOC_SOURCES src/displays/world_model_display.h)
+add_library(${PROJECT_NAME}_moc OBJECT ${${PROJECT_NAME}_MOC_SOURCES})
+set_target_properties(${PROJECT_NAME}_moc PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(${PROJECT_NAME}_moc PRIVATE ${${PROJECT_NAME}_DEPENDENCIES})
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+add_library(${PROJECT_NAME} SHARED
+  src/displays/world_model_display.cpp
+  src/visuals/entity_visual.cpp
+  $<TARGET_OBJECTS:${PROJECT_NAME}_moc>
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_DEPENDENCIES})
 
 pluginlib_export_plugin_description_file(rviz_common plugin_description.xml)
 
