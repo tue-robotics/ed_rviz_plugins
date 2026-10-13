@@ -33,6 +33,15 @@ set(${PROJECT_NAME}_DEPENDENCIES
   rviz_rendering::rviz_rendering
 )
 
+# Pure helpers, in a separate library so the unit tests can link them
+add_library(${PROJECT_NAME}_utils STATIC
+  src/displays/world_model_display_utils.cpp
+  src/visuals/mesh_utils.cpp
+)
+set_target_properties(${PROJECT_NAME}_utils PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_include_directories(${PROJECT_NAME}_utils PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
+target_link_libraries(${PROJECT_NAME}_utils PUBLIC rviz_ogre_vendor::OgreMain)
+
 # Generated moc code is kept out of compile_commands.json, so clang-tidy only checks our own sources
 set(CMAKE_EXPORT_COMPILE_COMMANDS OFF)
 qt5_wrap_cpp(${PROJECT_NAME}_MOC_SOURCES src/displays/world_model_display.h)
@@ -46,7 +55,7 @@ add_library(${PROJECT_NAME} SHARED
   src/visuals/entity_visual.cpp
   $<TARGET_OBJECTS:${PROJECT_NAME}_moc>
 )
-target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_DEPENDENCIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_utils ${${PROJECT_NAME}_DEPENDENCIES})
 
 pluginlib_export_plugin_description_file(rviz_common plugin_description.xml)
 
@@ -66,6 +75,19 @@ install(PROGRAMS scripts/send_test_msgs.py
 )
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_world_model_display_utils test/test_world_model_display_utils.cpp)
+  target_link_libraries(test_world_model_display_utils ${PROJECT_NAME}_utils)
+  ament_add_gtest(test_mesh_utils test/test_mesh_utils.cpp)
+  target_link_libraries(test_mesh_utils ${PROJECT_NAME}_utils)
+  # Loads the installed plugin the way rviz does; needs a QApplication, so it brings its own main()
+  ament_add_gtest(test_plugin_load test/test_plugin_load.cpp
+    SKIP_LINKING_MAIN_LIBRARIES
+    ENV QT_QPA_PLATFORM=offscreen
+    APPEND_ENV AMENT_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
+  )
+  target_link_libraries(test_plugin_load pluginlib::pluginlib rviz_common::rviz_common Qt5::Widgets)
+
   find_package(ament_cmake_clang_format REQUIRED)
   find_package(ament_cmake_clang_tidy REQUIRED)
   find_package(ament_cmake_lint_cmake REQUIRED)

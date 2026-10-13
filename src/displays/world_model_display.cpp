@@ -1,6 +1,7 @@
 #include "world_model_display.h"
 
 #include "../visuals/entity_visual.h"
+#include "world_model_display_utils.h"
 
 #include <ed_gui_server_interfaces/msg/entity_infos.hpp>
 #include <ed_gui_server_interfaces/srv/query_meshes.hpp>
@@ -21,10 +22,8 @@
 #include <algorithm>
 #include <chrono>
 #include <future>
-#include <iterator>
 #include <memory>
 #include <regex>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,41 +37,6 @@ const float COLORS[27][3] = {{0.6, 0.6, 0.6}, {0.6, 0.6, 0.4}, {0.6, 0.6, 0.2}, 
                              {0.4, 0.2, 0.6}, {0.4, 0.2, 0.4}, {0.4, 0.2, 0.2}, {0.2, 0.6, 0.6}, {0.2, 0.6, 0.4},
                              {0.2, 0.6, 0.2}, {0.2, 0.4, 0.6}, {0.2, 0.4, 0.4}, {0.2, 0.4, 0.2}, {0.2, 0.2, 0.6},
                              {0.2, 0.2, 0.4}, {0.2, 0.2, 0.2}};
-
-unsigned int djb2(const std::string& str)
-{
-    int hash = 5381;
-    for (const char& c : str)
-        hash = ((hash << 5) + hash) + c;
-
-    if (hash < 0)
-        hash = -hash;
-
-    return static_cast<unsigned int>(hash);
-}
-
-std::vector<std::string> split(const std::string& str_to_split, char delimiter)
-{
-    std::stringstream ss(str_to_split);
-    std::string item;
-    std::vector<std::string> result;
-    while (std::getline(ss, item, delimiter))
-    {
-        if (!item.empty() && item[0] != delimiter)
-            result.push_back(item);
-    }
-    return result;
-}
-
-void stringsToRegexes(const std::string& str_to_split, std::vector<std::regex>& regexes, char delimiter = ';')
-{
-    const auto strings = split(str_to_split, delimiter);
-    regexes.clear();
-    regexes.reserve(strings.size());
-    std::ranges::transform(strings,
-                           std::back_inserter(regexes),
-                           [](const std::string& str) { return std::regex(str, std::regex_constants::icase); });
-}
 
 } // namespace
 
@@ -127,17 +91,17 @@ void WorldModelDisplay::updateProperties()
 
 void WorldModelDisplay::updateExcludeEntities()
 {
-    stringsToRegexes(exclude_entities_property_->getStdString(), exclude_entities_);
+    exclude_entities_ = stringsToRegexes(exclude_entities_property_->getStdString());
 }
 
 void WorldModelDisplay::updateExcludeEntityTypes()
 {
-    stringsToRegexes(exclude_entity_types_property_->getStdString(), exclude_entity_types_);
+    exclude_entity_types_ = stringsToRegexes(exclude_entity_types_property_->getStdString());
 }
 
 void WorldModelDisplay::updateExcludeLabels()
 {
-    stringsToRegexes(exclude_labels_property_->getStdString(), exclude_labels_);
+    exclude_labels_ = stringsToRegexes(exclude_labels_property_->getStdString());
 }
 
 void WorldModelDisplay::onInitialize()
@@ -239,7 +203,7 @@ void WorldModelDisplay::processMessage(ed_gui_server_interfaces::msg::EntityInfo
 
         const auto& visual = visuals_[info.id];
 
-        // Per component instead of Ogre::Vector3::operator+, see triangleNormal() in entity_visual.cpp
+        // Per component instead of Ogre::Vector3::operator+, see triangleNormal() in mesh_utils.cpp
         const Ogre::Vector3 position(frame_position.x + static_cast<Ogre::Real>(info.pose.position.x),
                                      frame_position.y + static_cast<Ogre::Real>(info.pose.position.y),
                                      frame_position.z + static_cast<Ogre::Real>(info.pose.position.z));
